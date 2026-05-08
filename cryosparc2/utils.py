@@ -437,6 +437,20 @@ def createEmptyWorkSpace(projectName, workspaceTitle, workspaceComment):
     return runCmd(create_work_space_cmd, printCmd=False)
 
 
+
+
+def _getPreprocessLane(protocol):
+    preprocessLane = str(protocol.getAttributeValue('preprocessLane', '') or '').strip()
+    if preprocessLane:
+        return preprocessLane
+
+    defaultLane = str(protocol.getAttributeValue('compute_lane', '') or '').strip()
+    if defaultLane:
+        return defaultLane
+
+    lane = getattr(protocol, 'lane', '')
+    return str(lane or 'default').strip() or 'default'
+
 def doImportParticlesStar(protocol):
     """
     do_import_particles_star(puid, wuid, uuid, abs_star_path,
@@ -453,7 +467,7 @@ def doImportParticlesStar(protocol):
               }
 
     import_particles = enqueueJob(className, protocol.projectName, protocol.workSpaceName,
-                                  str(params).replace('\'', '"'), '{}', protocol.lane)
+                                  str(params).replace('\'', '"'), '{}', _getPreprocessLane(protocol))
 
     waitForCryosparc(protocol.projectName.get(), import_particles.get(),
                      "An error occurred importing particles. "
@@ -476,7 +490,7 @@ def doImportVolumes(protocol, refVolumePath, refVolume, volType, msg):
     importedVolume = enqueueJob(className, protocol.projectName,
                                 protocol.workSpaceName,
                                 str(params).replace('\'', '"'), '{}',
-                                protocol.lane)
+                                _getPreprocessLane(protocol))
 
     waitForCryosparc(protocol.projectName.get(), importedVolume.get(),
                      "An error occurred importing the volume. "
@@ -512,7 +526,7 @@ def doImportMicrographs(protocol):
               }
 
     import_particles = enqueueJob(className, protocol.projectName, protocol.workSpaceName,
-                                  str(params).replace('\'', '"'), '{}', protocol.lane)
+                                  str(params).replace('\'', '"'), '{}', _getPreprocessLane(protocol))
 
     waitForCryosparc(protocol.projectName.get(), import_particles.get(),
                      "An error occurred importing particles. "
@@ -1017,7 +1031,7 @@ def addComputeSectionParams(form, allowMultipleGPUs=True, needGPU=True):
     Add the compute settings section
     """
     from pyworkflow.protocol.params import (BooleanParam, StringParam, NonEmpty,
-                                            GPU_LIST)
+                                            GPU_LIST, LEVEL_ADVANCED)
     computeSSD = os.getenv(CRYOSPARC_USE_SSD)
     if computeSSD is None:
         computeSSD = False
@@ -1062,8 +1076,13 @@ def addComputeSectionParams(form, allowMultipleGPUs=True, needGPU=True):
     if defaultLane is None:
         defaultLane = 'default'
     form.addParam('compute_lane', StringParam, default=defaultLane,
-                  label='Lane name:', readOnly=True,
-                  help='The scheduler lane name to add the protocol execution')
+                  label='Default lane name:', readOnly=True,
+                  help='Scheduler lane for main processing jobs.')
+
+    form.addParam('preprocessLane', StringParam, default='', expertLevel=LEVEL_ADVANCED,
+                  label='Preprocessing lane name:',
+                  help='Optional scheduler lane for quick setup/import/preprocessing tasks. '
+                       'Leave empty to use the default lane.')
 
     from .protocols import ProtCryo2D
     if not isCryosparcStandalone() and isinstance(form._protocol, ProtCryo2D):

@@ -37,8 +37,8 @@ from pyworkflow.protocol.params import (PointerParam, FloatParam,
 from .protocol_base import ProtCryosparcBase
 from .. import RELIONCOLUMNS
 from ..convert import convertCs2Star
-from ..utils import (addComputeSectionParams, cryosparcValidate,  enqueueJob, waitForCryosparc, clearIntermediateResults,
-                     copyFiles)
+from ..utils import (addComputeSectionParams, cryosparcValidate, enqueueJob, waitForCryosparc,
+                     clearIntermediateResults, copyFiles, _getPreprocessLane)
 
 
 class ProtCryoSparcBlobPicker(ProtCryosparcBase):
@@ -236,6 +236,7 @@ class ProtCryoSparcBlobPicker(ProtCryosparcBase):
                             'num_process', 'max_num_hits']
 
         self.lane = str(self.getAttributeValue('compute_lane'))
+        self.preprocessLane = _getPreprocessLane(self)
 
     # --------------------------- INFO functions -------------------------------
     def _validate(self):
@@ -272,7 +273,7 @@ class ProtCryoSparcBlobPicker(ProtCryosparcBase):
                                       self.workSpaceName.get(),
                                       str(params).replace('\'', '"'),
                                       str(input_group_connect).replace('\'', '"'),
-                                      self.lane, gpusToUse)
+                                      self.preprocessLane, gpusToUse)
 
         self.runPatchCTF = String(runPatchCTFJob.get())
         self.currenJob.set(runPatchCTFJob.get())
